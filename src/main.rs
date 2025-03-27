@@ -28,8 +28,8 @@ use embedded_svc::{
     wifi::{AuthMethod, ClientConfiguration, Configuration},
 };
 
-const SSID: &str = "VM4597057";
-const PASSWORD: &str = "hm5dcBcfSnvx";
+const SSID: &str = std::env!("SSID");
+const PASSWORD: &str = std::env!("PASSWORD");
 fn main() -> Result<(), Box<dyn Error>> {
     // It is necessary to call this function once. Otherwise, some patches to the runtime
     // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
@@ -93,7 +93,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Create text style for "Hello"
     let style_hello = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
-    Text::new("TS", Point::new(5, 10), style_hello)
+    Text::new("TSS", Point::new(5, 10), style_hello)
         .draw(&mut display)
         .map_err(|_| Box::<dyn Error>::from("draw hello"))?;
 
