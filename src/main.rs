@@ -9,6 +9,9 @@ use embedded_graphics::{
 };
 use esp_idf_svc::hal::{prelude::Peripherals};
 use std::error::Error;
+use std::thread;
+use std::thread::sleep;
+use std::time::Duration;
 use embedded_graphics::mono_font::iso_8859_16::FONT_10X20;
 use embedded_graphics::pixelcolor::Rgb565;
 use esp_idf_svc::eventloop::EspSystemEventLoop;
@@ -28,6 +31,8 @@ use esp_idf_sys::esp_task_wdt_reset;
 const SSID: &str = std::env!("SSID");
 const PASSWORD: &str = std::env!("PASSWORD");
 
+const BASEURL: &str = std::env!("BASEURL");
+
 fn main() -> Result<(), Box<dyn Error>> {
     // It is necessary to call this function once. Otherwise, some patches to the runtime
     // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
@@ -43,9 +48,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     //Display
     let mut display = setup_display(peripherals.pins, peripherals.spi2)?;
 
-    let pixels = AlwaysSame {value: Rgb565::BLACK};
-    display.set_pixels( 0,0,540,300, pixels.into_iter().take(540*300) )
+    let blue_pixels = AlwaysSame {value: Rgb565::BLUE};
+    display.set_pixels( 0,0,500,250, blue_pixels.into_iter().take(500*250) )
         .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+
+    let red_pixels = AlwaysSame {value: Rgb565::RED};
+    display.set_pixels( 0,250,500,350, red_pixels.into_iter().take(500 * 100) )
+        .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+
     log::info!("Cleared Display");
 
     //Wi-Fi
@@ -61,15 +71,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut client = HttpClient::wrap(EspHttpConnection::new(&Default::default())?);
     log::info!("Connected WiFi");
 
-    // GET
-    let requestString = get_request(&mut client)?;
-    log::info!("Got request");
+    loop {
+        // GET
+        let request_string = get_request(&mut client, format!("{}/Time/GetCurrentTime", BASEURL))?;
+        log::info!("Got request");
 
-    let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::GREEN);
-    Text::new(&requestString, Point::new(0, 0), text_style)
-        .draw(&mut display)
-        .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+        display.clear(Rgb565::BLUE).map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
+        let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::GREEN);
+        Text::new(&request_string, Point::new(50, 50), text_style)
+            .draw(&mut display)
+            .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
-    Ok(())
+        sleep(Duration::from_millis(1000));
+    }
 }

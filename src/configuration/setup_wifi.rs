@@ -31,13 +31,12 @@ pub fn connect_wifi(wifi: &mut BlockingWifi<EspWifi<'static>>) -> anyhow::Result
     Ok(())
 }
 
-pub fn get_request(client: &mut HttpClient<EspHttpConnection>) -> anyhow::Result<String> {
+pub fn get_request(client: &mut HttpClient<EspHttpConnection>, url: String) -> anyhow::Result<String> {
     // Prepare headers and URL
     //Only HTTP for now, since SSL is a pain
     let headers = [("accept", "text/plain")];
-    let url = "http://http.badssl.com/";
 
-    let request = client.request(Method::Get, url, &headers)?;
+    let request = client.request(Method::Get, &*url, &headers)?;
     log::info!("-> GET {}", url);
     let mut response = request.submit()?;
 
