@@ -2,14 +2,14 @@ use display_interface_spi::SPIInterfaceNoCS;
 use esp_idf_hal::delay::Ets;
 use esp_idf_hal::gpio;
 use esp_idf_hal::gpio::{Gpio2, Gpio4, PinDriver, Pins};
-use esp_idf_hal::prelude::{MegaHertz, Peripherals};
+use esp_idf_hal::prelude::{MegaHertz};
 use esp_idf_hal::spi::config::{Config, DriverConfig};
 use esp_idf_hal::spi::{Dma, SpiDeviceDriver, SpiDriver, SPI2};
 use mipidsi::{Builder, Display};
 use mipidsi::models::ILI9341Rgb565;
 
 pub fn setup_display(pins : Pins, spi : SPI2) ->
-Result<Display<SPIInterfaceNoCS<SpiDeviceDriver<'static, SpiDriver<'static>>, PinDriver<'static, Gpio2, esp_idf_hal::gpio::Output>>, ILI9341Rgb565, PinDriver<'static, Gpio4, esp_idf_hal::gpio::Output>>, String>
+Result<Display<SPIInterfaceNoCS<SpiDeviceDriver<'static, SpiDriver<'static>>, PinDriver<'static, Gpio2, gpio::Output>>, ILI9341Rgb565, PinDriver<'static, Gpio4, gpio::Output>>, String>
 {
     // Reset
     let rst = gpio::PinDriver::output(pins.gpio4).map_err(|_| String::from("Cannot init GPIO4"))?;

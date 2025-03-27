@@ -1,0 +1,1 @@
+pub mod always_same;
