@@ -1,3 +1,5 @@
+mod configuration;
+
 use display_interface_spi::SPIInterfaceNoCS;
 use embedded_graphics::{
     mono_font::{ascii::FONT_9X18, MonoTextStyle},
@@ -27,65 +29,20 @@ use embedded_svc::{
     utils::io,
     wifi::{AuthMethod, ClientConfiguration, Configuration},
 };
+use configuration::setup_display;
+use crate::configuration::setup_display::setup_display;
 
 const SSID: &str = std::env!("SSID");
 const PASSWORD: &str = std::env!("PASSWORD");
+
 fn main() -> Result<(), Box<dyn Error>> {
     // It is necessary to call this function once. Otherwise, some patches to the runtime
     // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
     esp_idf_sys::link_patches();
 
-    let peripherals = Peripherals::take().unwrap();
-    let pins = peripherals.pins;
+    let mut peripherals = Peripherals::take().unwrap();
 
-    // Reset, -1 or 4
-    let rst = gpio::PinDriver::output(pins.gpio4)?;
-    // Data Command control pin
-    let dc = gpio::PinDriver::output(pins.gpio2)?;
-
-    // Espressif built-in delay provider for small delays
-    let mut delay = Ets;
-
-    // Pin 14, Serial Clock
-    let sclk = pins.gpio14;
-    let spi = peripherals.spi2;
-    // Pin 13, MOSI, Master Out Slave In
-    let sdo = pins.gpio13;
-    // Pin 12, MISO, Master In Slave Out (unused in this example)
-    let sdi = pins.gpio12;
-
-    let cs = pins.gpio15;
-
-    // SPI interface with no chip select
-    let di = SPIInterfaceNoCS::new(
-        SpiDeviceDriver::new_single(
-            spi,
-            sclk,
-            sdo,
-            Some(sdi),
-            Some(cs),
-            &DriverConfig::new().dma(Dma::Disabled),
-            &Config::new().baudrate(MegaHertz(40).into()),
-        )?,
-        dc,
-    );
-
-    // Initialize the display with the ILI9341 driver
-    let mut display = Builder::ili9341_rgb565(di)
-        .with_color_order(mipidsi::ColorOrder::Bgr)
-        .with_orientation(mipidsi::options::Orientation::Landscape(false))  // Mirror on text
-        //.with_display_size(320,240)
-        .init(&mut delay, Some(rst))
-        .map_err(|_| Box::<dyn Error>::from("display init"))?;
-
-
-    // Pin 27, Backlight
-    let mut bl = gpio::PinDriver::output(pins.gpio27)?;
-    // Turn on backlight
-    bl.set_high()?;
-
-    // Force the GPIO to hold its high state
-    core::mem::forget(bl);
+    let mut display = setup_display(peripherals.pins, peripherals.spi2)?;
 
     // Clear the screen with black
     display.clear(Rgb565::BLACK)
