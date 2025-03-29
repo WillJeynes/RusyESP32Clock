@@ -55,3 +55,22 @@ pub fn get_request(client: &mut HttpClient<EspHttpConnection>, url: String) -> a
 
     return Err(anyhow::anyhow!("Error decoding response body"));
 }
+
+pub fn get_request_raw(client: &mut HttpClient<EspHttpConnection>, url: String) -> anyhow::Result<Vec<u8>> {
+    // Prepare headers and URL
+    //Only HTTP for now, since SSL is a pain
+    let headers = [];
+
+    let request = client.request(Method::Get, &*url, &headers)?;
+    log::info!("-> GET {}", url);
+    let mut response = request.submit()?;
+
+    // Process response
+    let status = response.status();
+    log::info!("<- {}", status);
+    let mut buf = vec![0u8; 100000];
+    let bytes_read = io::try_read_full(&mut response, &mut buf).map_err(|e| e.0)?;
+    log::info!("Read {} bytes", bytes_read);
+    buf.truncate(bytes_read);
+    Ok(buf)
+}

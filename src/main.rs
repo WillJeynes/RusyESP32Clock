@@ -21,7 +21,7 @@ use esp_idf_svc::nvs::EspDefaultNvsPartition;
 use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
 use crate::configuration::setup_display::setup_display;
-use crate::configuration::setup_wifi::{connect_wifi, get_request};
+use crate::configuration::setup_wifi::{connect_wifi, get_request, get_request_raw};
 use embedded_svc::{
     http::{client::Client as HttpClient},
 };
@@ -85,10 +85,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         .draw(&mut display)
         .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
-    let bmp_data = include_bytes!("ImageTest.bmp");
-    let bmp = Bmp::<Rgb565>::from_slice(bmp_data).unwrap();
-    Image::new(&bmp, Point::new(250, 250)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
-    display.set_pixels(100,100,150,150, bmp.pixels().map(|pixel| Rgb565::new(pixel.1.r(),pixel.1.g(),pixel.1.b()) )).map_err(|_| Box::<dyn Error>::from("draw world"))?;;
-    
+    let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/0", BASEURL)).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+    let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
+    Image::new(&bmp, Point::new(50, 200)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+
     Ok(())
 }

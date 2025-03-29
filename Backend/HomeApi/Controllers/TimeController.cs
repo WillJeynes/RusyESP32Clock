@@ -1,4 +1,13 @@
+using System.Drawing.Imaging;
 using Microsoft.AspNetCore.Mvc;
+using SixLabors.Fonts;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.Formats.Bmp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using Color = System.Drawing.Color;
+using PointF = System.Drawing.PointF;
 
 namespace HomeApi.Controllers;
 
@@ -10,5 +19,36 @@ public class TimeController : ControllerBase
     public string GetCurrentTime()
     {
         return DateTime.Now.ToString() + " : " + Random.Shared.Next(0,3000);
+    }
+
+    [HttpGet("Image/{no}")]
+    public IActionResult GenerateBmp(int no)
+    {
+        int width = 300, height = 100;
+
+        using (var image = new Image<Rgba32>(width, height))
+        {
+            FontFamily fontFamily;
+            
+            if (!SystemFonts.TryGet("Comfortaa", out fontFamily))
+                throw new Exception($"Couldn't find font");
+            
+            Font font = fontFamily.CreateFont(32f, FontStyle.Regular);
+
+            var options = new TextOptions(font)
+            {
+                Dpi = 72,
+                KerningMode = KerningMode.Standard
+            };
+
+            image.Mutate(x => x.DrawText("FROM API: " + no, font,SixLabors.ImageSharp.Color.Aqua, new SixLabors.ImageSharp.PointF(10,10)));
+            image.Mutate(x => x.DrawText("TS PMO", font,SixLabors.ImageSharp.Color.Aqua, new SixLabors.ImageSharp.PointF(10,50)));
+            // Convert image to BMP format in memory
+            using (var ms = new MemoryStream())
+            {
+                image.Save(ms, new BmpEncoder());
+                return File(ms.ToArray(), "image/bmp");
+            }
+        }
     }
 }
