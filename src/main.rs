@@ -12,6 +12,7 @@ use std::error::Error;
 use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
+use embedded_graphics::image::Image;
 use embedded_graphics::mono_font::iso_8859_16::FONT_10X20;
 use embedded_graphics::pixelcolor::Rgb565;
 use esp_idf_svc::eventloop::EspSystemEventLoop;
@@ -27,6 +28,7 @@ use embedded_svc::{
 use crate::utils::always_same::AlwaysSame;
 use esp_idf_hal::delay::Ets;
 use esp_idf_sys::esp_task_wdt_reset;
+use tinybmp::Bmp;
 
 const SSID: &str = std::env!("SSID");
 const PASSWORD: &str = std::env!("PASSWORD");
@@ -71,18 +73,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut client = HttpClient::wrap(EspHttpConnection::new(&Default::default())?);
     log::info!("Connected WiFi");
 
-    loop {
-        // GET
-        let request_string = get_request(&mut client, format!("{}/Time/GetCurrentTime", BASEURL))?;
-        log::info!("Got request");
 
-        display.clear(Rgb565::BLUE).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+    // GET
+    let request_string = get_request(&mut client, format!("{}/Time/GetCurrentTime", BASEURL))?;
+    log::info!("Got request");
 
-        let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::GREEN);
-        Text::new(&request_string, Point::new(50, 50), text_style)
-            .draw(&mut display)
-            .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+    display.clear(Rgb565::BLUE).map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
-        sleep(Duration::from_millis(1000));
-    }
+    let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::GREEN);
+    Text::new(&request_string, Point::new(50, 50), text_style)
+        .draw(&mut display)
+        .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+
+    let bmp_data = include_bytes!("ImageTest.bmp");
+    let bmp = Bmp::<Rgb565>::from_slice(bmp_data).unwrap();
+    Image::new(&bmp, Point::new(250, 250)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+    display.set_pixels(100,100,150,150, bmp.pixels().map(|pixel| Rgb565::new(pixel.1.r(),pixel.1.g(),pixel.1.b()) )).map_err(|_| Box::<dyn Error>::from("draw world"))?;;
+    
+    Ok(())
 }
