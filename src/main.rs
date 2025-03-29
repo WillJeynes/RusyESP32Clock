@@ -85,9 +85,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         .draw(&mut display)
         .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
-    let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/0", BASEURL)).map_err(|_| Box::<dyn Error>::from("draw world"))?;
-    let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
-    Image::new(&bmp, Point::new(50, 200)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+    let mut counter:i32 = 0;
+    loop {
+        counter = counter + 1;
+        let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/{}", BASEURL, counter)).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+        let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
+        Image::new(&bmp, Point::new((counter % 2)*250, 220)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+    }
 
     Ok(())
 }

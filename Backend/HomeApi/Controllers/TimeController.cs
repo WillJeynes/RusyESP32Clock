@@ -24,7 +24,7 @@ public class TimeController : ControllerBase
     [HttpGet("Image/{no}")]
     public IActionResult GenerateBmp(int no)
     {
-        int width = 300, height = 100;
+        int width = 230, height = 100;
 
         using (var image = new Image<Rgba32>(width, height))
         {
@@ -42,7 +42,7 @@ public class TimeController : ControllerBase
             };
 
             image.Mutate(x => x.DrawText("FROM API: " + no, font,SixLabors.ImageSharp.Color.Aqua, new SixLabors.ImageSharp.PointF(10,10)));
-            image.Mutate(x => x.DrawText("TS PMO", font,SixLabors.ImageSharp.Color.Aqua, new SixLabors.ImageSharp.PointF(10,50)));
+            image.Mutate(x => x.DrawText("*Weather*", font,SixLabors.ImageSharp.Color.Aqua, new SixLabors.ImageSharp.PointF(10,50)));
             // Convert image to BMP format in memory
             using (var ms = new MemoryStream())
             {
