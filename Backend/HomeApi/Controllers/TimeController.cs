@@ -18,14 +18,14 @@ public class TimeController : ControllerBase
     [HttpGet("GetCurrentTime")]
     public string GetCurrentTime()
     {
-        return DateTime.Now.ToString() + " : " + Random.Shared.Next(0,3000);
+        return DateTimeOffset.Now.ToUnixTimeMilliseconds().ToString();
     }
-
+    static int counter = 0;
     [HttpGet("Image/{no}")]
     public IActionResult GenerateBmp(int no)
     {
         int width = 230, height = 100;
-
+        counter++;
         using (var image = new Image<Rgba32>(width, height))
         {
             FontFamily fontFamily;
@@ -41,7 +41,7 @@ public class TimeController : ControllerBase
                 KerningMode = KerningMode.Standard
             };
 
-            image.Mutate(x => x.DrawText("FROM API: " + no, font,SixLabors.ImageSharp.Color.Aqua, new SixLabors.ImageSharp.PointF(10,10)));
+            image.Mutate(x => x.DrawText("API: " + counter, font,SixLabors.ImageSharp.Color.Aqua, new SixLabors.ImageSharp.PointF(10,10)));
             image.Mutate(x => x.DrawText("*Weather*", font,SixLabors.ImageSharp.Color.Aqua, new SixLabors.ImageSharp.PointF(10,50)));
             // Convert image to BMP format in memory
             using (var ms = new MemoryStream())

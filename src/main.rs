@@ -12,6 +12,7 @@ use std::error::Error;
 use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
+use chrono::{DateTime, NaiveDateTime};
 use embedded_graphics::image::Image;
 use embedded_graphics::mono_font::iso_8859_16::FONT_10X20;
 use embedded_graphics::pixelcolor::Rgb565;
@@ -27,7 +28,7 @@ use embedded_svc::{
 };
 use crate::utils::always_same::AlwaysSame;
 use esp_idf_hal::delay::Ets;
-use esp_idf_sys::esp_task_wdt_reset;
+use esp_idf_sys::{esp_task_wdt_reset, esp_timer_get_time};
 use tinybmp::Bmp;
 
 const SSID: &str = std::env!("SSID");
@@ -39,6 +40,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     // It is necessary to call this function once. Otherwise, some patches to the runtime
     // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
     esp_idf_sys::link_patches();
+
+    let mut delay = Ets;
 
     //Init Logging
     esp_idf_svc::log::EspLogger::initialize_default();
@@ -76,22 +79,71 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // GET
     let request_string = get_request(&mut client, format!("{}/Time/GetCurrentTime", BASEURL))?;
-    log::info!("Got request");
+    let request_clock = request_string.parse::<i64>().unwrap();
+    let request_millis = unsafe {esp_timer_get_time()} / 1000;
+    log::info!("Got Time Request {} at {}",request_string,  request_millis);
 
     display.clear(Rgb565::BLUE).map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
-    let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::GREEN);
-    Text::new(&request_string, Point::new(50, 50), text_style)
-        .draw(&mut display)
-        .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+    let mut current_date = String::from("");
+    let mut current_time = String::from("");
+
+    let mut last_updated_at_a = 0;
+    let mut last_updated_at_b = 0;
 
     let mut counter:i32 = 0;
     loop {
-        counter = counter + 1;
-        let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/{}", BASEURL, counter)).map_err(|_| Box::<dyn Error>::from("draw world"))?;
-        let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
-        Image::new(&bmp, Point::new((counter % 2)*250, 220)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
-    }
+        let current_millis = unsafe {esp_timer_get_time()} / 1000;
+        let difference = current_millis - request_millis;
+        log::info!("Current Time difference: {} ms", difference);
+        let current_millis = request_clock + difference;
+        log::info!("Current Time: {} ms", current_millis);
+        let naive = DateTime::from_timestamp_millis(current_millis).expect("Invalid timestamp");
+        log::info!("Current Time naive: {}", naive.format("%Y-%m-%d %H:%M:%S"));
+        let date_string = format!("{}", naive.format("%d-%m-%Y"));
+        let time_string = format!("{}", naive.format("%H:%M:%S"));
+        //TODO: Timezones
 
-    Ok(())
+        if (time_string != current_time) {
+            //TODO: replace with large display
+            let white_pixels = AlwaysSame {value: Rgb565::WHITE};
+            display.set_pixels( 10,80,300,100, white_pixels.into_iter().take(490*20) )
+                .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+
+            let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::GREEN);
+            Text::new(&time_string, Point::new(10, 100), text_style)
+                .draw(&mut display)
+                .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+
+            current_time = time_string;
+        }
+        else if (date_string != current_date) {
+            let white_pixels = AlwaysSame {value: Rgb565::WHITE};
+            display.set_pixels( 10,180,300,200, white_pixels.into_iter().take(490*20) )
+                .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+
+            let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::GREEN);
+            Text::new(&date_string, Point::new(10, 200), text_style)
+                .draw(&mut display)
+                .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+
+            current_date = date_string;
+        }
+        else if ((current_millis - last_updated_at_a) > 5000) {
+            let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/0", BASEURL)).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+            let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
+            Image::new(&bmp, Point::new( 10, 220)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+
+            last_updated_at_a = current_millis;
+        }
+        else if ((current_millis - last_updated_at_b) > 5000) {
+            let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/1", BASEURL)).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+            let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
+            Image::new(&bmp, Point::new( 250, 220)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+
+            last_updated_at_b = current_millis;
+        }
+
+        thread::sleep(Duration::from_millis(5));
+    }
 }
