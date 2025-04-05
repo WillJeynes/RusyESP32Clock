@@ -20,18 +20,40 @@ public class TimeController : ControllerBase
         return DateTimeOffset.Now.ToUnixTimeMilliseconds().ToString();
     }
     static int counter = 0;
-    [HttpGet("Image/{no}")]
-    public IActionResult GenerateBmp(int no)
+    [HttpGet("WeatherImage")]
+    public IActionResult GenerateWeatherPng()
     {
         var svg = LoadAndCustomizeSvg("hello, world");
         var data = RenderSvgToPng(svg);
-        return File(data, "image/bmp");
+        return File(data, "image/png");
+    }
+    
+    [HttpGet("Image/{no}")]
+    public async Task<IActionResult> GenerateBmp(int no)
+    {
+        var imageUrl = "https://picsum.photos/230/100";
+        if (no == 0)
+        {
+            //TODO: configuration via frontend
+            imageUrl = "http://localhost:5278/Time/WeatherImage";
+        }
+        
+        using var httpClient = new HttpClient();
+        // Optionally set headers if needed (e.g., User-Agent)
+        var response = await httpClient.GetAsync(imageUrl);
+
+        response.EnsureSuccessStatusCode(); // Throw if not 2xx
+        var imageBytes = await response.Content.ReadAsByteArrayAsync();
+        var bmpBytes = RenderPngToBmp(imageBytes);
+
+        return File(bmpBytes, "image/bmp");
     }
     
     string LoadAndCustomizeSvg(string message)
     {
         string templatePath = Path.Combine("Templates", "Template0.svg");
         string svg = System.IO.File.ReadAllText(templatePath);
+        //TODO: use a proper templating system (blazor?)
         svg =  svg.Replace("{{DESCRIPTION}}", message);
         svg =  svg.Replace("{{DAY0HREF}}", "https://picsum.photos/200");
         svg =  svg.Replace("{{IMAGE0}}", "https://picsum.photos/200");
@@ -54,9 +76,12 @@ public class TimeController : ControllerBase
         using var simage = surface.Snapshot();
         using var data = simage.Encode(SKEncodedImageFormat.Png, 100);
         
-
-        
-        using var inputStream = new MemoryStream(data.ToArray());
+        return data.ToArray();
+    }
+    
+    byte[] RenderPngToBmp(byte[] data)
+    {
+        using var inputStream = new MemoryStream(data);
         using Image image = Image.Load<Rgba32>(inputStream);
 
         using var outputStream = new MemoryStream();
