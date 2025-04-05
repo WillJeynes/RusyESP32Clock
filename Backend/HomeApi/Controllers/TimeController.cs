@@ -41,8 +41,8 @@ public class TimeController : ControllerBase
                 KerningMode = KerningMode.Standard
             };
 
-            image.Mutate(x => x.DrawText("API: " + counter, font,SixLabors.ImageSharp.Color.Aqua, new SixLabors.ImageSharp.PointF(10,10)));
-            image.Mutate(x => x.DrawText("*Weather*", font,SixLabors.ImageSharp.Color.Aqua, new SixLabors.ImageSharp.PointF(10,50)));
+            image.Mutate(x => x.DrawText("API: " + counter, font,SixLabors.ImageSharp.Color.White, new SixLabors.ImageSharp.PointF(10,10)));
+            image.Mutate(x => x.DrawText("*Weather*", font,SixLabors.ImageSharp.Color.White, new SixLabors.ImageSharp.PointF(10,50)));
             // Convert image to BMP format in memory
             using (var ms = new MemoryStream())
             {

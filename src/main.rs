@@ -1,3 +1,5 @@
+extern crate core;
+
 mod configuration;
 mod utils;
 
@@ -38,7 +40,11 @@ const PASSWORD: &str = std::env!("PASSWORD");
 
 const BASEURL: &str = std::env!("BASEURL");
 
+const DEBUG: &str = std::env!("DEBUG");
+
 fn main() -> Result<(), Box<dyn Error>> {
+    let ISDEBUG: bool = DEBUG == "TRUE";
+
     // It is necessary to call this function once. Otherwise, some patches to the runtime
     // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
     esp_idf_sys::link_patches();
@@ -55,11 +61,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     //Display
     let mut display = setup_display(peripherals.pins, peripherals.spi2)?;
 
-    let blue_pixels = AlwaysSame {value: Rgb565::BLUE};
+    let blue_pixels = AlwaysSame {value: if (ISDEBUG) { Rgb565::BLUE } else { Rgb565::BLACK} };
     display.set_pixels( 0,0,500,250, blue_pixels.into_iter().take(500*250) )
         .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
-    let red_pixels = AlwaysSame {value: Rgb565::RED};
+    let red_pixels = AlwaysSame {value: if (ISDEBUG) { Rgb565::RED } else { Rgb565::BLACK } };
     display.set_pixels( 0,250,500,350, red_pixels.into_iter().take(500 * 100) )
         .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
@@ -85,10 +91,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let request_millis = unsafe {esp_timer_get_time()} / 1000;
     log::info!("Got Time Request {} at {}",request_string,  request_millis);
 
-    display.clear(Rgb565::BLUE).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+    //display.clear(Rgb565::BLUE).map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
     let mut current_date = String::from("");
-    let mut current_time = String::from("");
+    let mut current_time = String::from("aaaaaa");
 
     let mut last_updated_at_a = 0;
     let mut last_updated_at_b = 0;
@@ -131,55 +137,71 @@ fn main() -> Result<(), Box<dyn Error>> {
         log::info!("Current Time naive: {}", zoned.format("%Y-%m-%d %H:%M:%S"));
         let date_string = format!("{}", zoned.format("%A %d %B %Y (%d/%m/%Y) WK %U"));
         let time_string = format!("{}", zoned.format("%H%M%S"));
+
         //TODO: Timezones
 
         if (time_string != current_time) {
-            //TODO: replace with large display
-            // let white_pixels = AlwaysSame {value: Rgb565::WHITE};
-            // display.set_pixels( 10,80,300,100, white_pixels.into_iter().take(490*20) )
-            //     .map_err(|_| Box::<dyn Error>::from("draw world"))?;
-            let scale = 5;
-            let mut offset_x = 10;
-            let offset_y = 10;
+            let def_scale : i32 = 5;
+            let small_scale: i32 = 2;
 
-           time_string.chars().for_each(|number| {
-               for Pixel(position, color) in as_bmps[0].pixels() {
-                   let display_pixels = AlwaysSame {value: Rgb565::new(color.r(), color.g(), color.b())};
-                   display.set_pixels(
-                       (offset_x + position.x * scale) as u16,
-                       (offset_y + position.y * scale) as u16,
-                       (offset_x + (position.x+1) * scale) as u16,
-                       (offset_y + (position.y+1) * scale) as u16,
-                       display_pixels.into_iter().take((scale * (scale + 1)) as usize))
-                       .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+            let offset_y : i32 = 10;
+
+           for number in 0..time_string.len() {
+               if let (Some(c1), Some(c2)) = (time_string.chars().nth(number), current_time.chars().nth(number)) {
+                   if c1 != c2 {
+                       let index: usize = c1.to_string().parse().unwrap();
+
+                       let isSmall = number > 3;
+                       //AAAAAAAAAAAAa
+                       let offset_x : i32 = if !isSmall {
+                           10 + (number as i32 * ((def_scale * 15) + 20))
+                       }
+                       else {
+                           10 + (4 * ((def_scale * 15) + 20)) + ((number as i32- 4) * ((small_scale * 15) + 5))
+                       };
+                       let scale : i32 = if isSmall { small_scale} else {def_scale};
+
+                       let pixels = as_bmps[index].pixels();
+
+                       for Pixel(position, color) in pixels {
+                           let display_pixels = AlwaysSame { value: Rgb565::from(color) };
+                           display.set_pixels(
+                               (offset_x + position.x * scale) as u16,
+                               (offset_y + position.y * scale) as u16,
+                               (offset_x + (position.x + 1) * scale) as u16,
+                               (offset_y + (position.y + 1) * scale) as u16,
+                               display_pixels.into_iter().take((scale * (scale + 1)) as usize))
+                               .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+                       }
+
+                       //TODO: 1 should be smaller? (will break display clearing)
+
+                   }
                }
-               offset_x += scale * 15;
-           });
-
-
+           }
 
             current_time = time_string;
         }
         else if (date_string != current_date) {
-            let white_pixels = AlwaysSame {value: Rgb565::WHITE};
-            display.set_pixels( 10,185,400,205, white_pixels.into_iter().take(500*20) )
+            let white_pixels = AlwaysSame {value: if (ISDEBUG) { Rgb565::GREEN } else { Rgb565::BLACK } };
+            display.set_pixels( 10,185,450,205, white_pixels.into_iter().take(550*20) )
                 .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
-            let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::GREEN);
+            let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
             Text::new(&date_string, Point::new(10, 200), text_style)
                 .draw(&mut display)
                 .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
             current_date = date_string;
         }
-        else if ((current_millis - last_updated_at_a) > 5000) {
+        else if ((current_millis - last_updated_at_a) > 50000) {
             let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/0", BASEURL)).map_err(|_| Box::<dyn Error>::from("draw world"))?;
             let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
             Image::new(&bmp, Point::new( 10, 220)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
             last_updated_at_a = current_millis;
         }
-        else if ((current_millis - last_updated_at_b) > 5000) {
+        else if ((current_millis - last_updated_at_b) > 50000) {
             let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/1", BASEURL)).map_err(|_| Box::<dyn Error>::from("draw world"))?;
             let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
             Image::new(&bmp, Point::new( 250, 220)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
@@ -187,6 +209,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             last_updated_at_b = current_millis;
         }
 
+        thread::sleep(Duration::from_millis(5));
         thread::sleep(Duration::from_millis(5));
     }
 }
