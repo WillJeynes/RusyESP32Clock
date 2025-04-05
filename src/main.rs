@@ -16,7 +16,7 @@ use chrono::{DateTime, NaiveDateTime, TimeZone};
 use chrono_tz::TZ_VARIANTS;
 use embedded_graphics::image::Image;
 use embedded_graphics::mono_font::iso_8859_16::FONT_10X20;
-use embedded_graphics::pixelcolor::Rgb565;
+use embedded_graphics::pixelcolor::{Rgb565, Rgb888};
 use esp_idf_svc::eventloop::EspSystemEventLoop;
 use esp_idf_svc::http::client::EspHttpConnection;
 use esp_idf_svc::nvs::EspDefaultNvsPartition;
@@ -102,6 +102,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     //Temp, add env based font loading
     let fontBitmaps = [
+        include_bytes!("Fonts/Default/0.bmp"),
         include_bytes!("Fonts/Default/1.bmp"),
         include_bytes!("Fonts/Default/2.bmp"),
         include_bytes!("Fonts/Default/3.bmp"),
@@ -113,9 +114,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         include_bytes!("Fonts/Default/9.bmp"),
     ];
 
-    let as_bmps = fontBitmaps.map(|data|  Bmp::<Rgb565>::from_slice(data).unwrap());
-
-    
+    let as_bmps = fontBitmaps.map(|data|  Bmp::<Rgb888>::from_slice(data).unwrap());
 
     loop {
         let current_millis = unsafe {esp_timer_get_time()} / 1000;
@@ -136,14 +135,28 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         if (time_string != current_time) {
             //TODO: replace with large display
-            let white_pixels = AlwaysSame {value: Rgb565::WHITE};
-            display.set_pixels( 10,80,300,100, white_pixels.into_iter().take(490*20) )
-                .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+            // let white_pixels = AlwaysSame {value: Rgb565::WHITE};
+            // display.set_pixels( 10,80,300,100, white_pixels.into_iter().take(490*20) )
+            //     .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+            let scale = 5;
+            let mut offset_x = 10;
+            let offset_y = 10;
 
-            let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::GREEN);
-            Text::new(&time_string, Point::new(10, 100), text_style)
-                .draw(&mut display)
-                .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+           time_string.chars().for_each(|number| {
+               for Pixel(position, color) in as_bmps[0].pixels() {
+                   let display_pixels = AlwaysSame {value: Rgb565::new(color.r(), color.g(), color.b())};
+                   display.set_pixels(
+                       (offset_x + position.x * scale) as u16,
+                       (offset_y + position.y * scale) as u16,
+                       (offset_x + (position.x+1) * scale) as u16,
+                       (offset_y + (position.y+1) * scale) as u16,
+                       display_pixels.into_iter().take((scale * (scale + 1)) as usize))
+                       .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+               }
+               offset_x += scale * 15;
+           });
+
+
 
             current_time = time_string;
         }
