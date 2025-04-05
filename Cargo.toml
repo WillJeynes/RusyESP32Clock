@@ -1,5 +1,5 @@
 [package]
-name = "RusyClock"
+name = "RustyClock"
 version = "0.0.1"
 authors = ["WillJeynes (https://github.com/WillJeynes/)"]
 edition = "2021"
@@ -37,6 +37,7 @@ embedded-svc = "0.28.1"
 anyhow = "1.0.97"
 tinybmp = "0.6.0"
 chrono = { version = "*", default-features = false, features = ["clock"] }
+chrono-tz = "*"
 
 [build-dependencies]
 #embuild = "0.31.4"

@@ -12,7 +12,8 @@ use std::error::Error;
 use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
-use chrono::{DateTime, NaiveDateTime};
+use chrono::{DateTime, NaiveDateTime, TimeZone};
+use chrono_tz::TZ_VARIANTS;
 use embedded_graphics::image::Image;
 use embedded_graphics::mono_font::iso_8859_16::FONT_10X20;
 use embedded_graphics::pixelcolor::Rgb565;
@@ -26,6 +27,7 @@ use crate::configuration::setup_wifi::{connect_wifi, get_request, get_request_ra
 use embedded_svc::{
     http::{client::Client as HttpClient},
 };
+use embedded_svc::http::status::INFO;
 use crate::utils::always_same::AlwaysSame;
 use esp_idf_hal::delay::Ets;
 use esp_idf_sys::{esp_task_wdt_reset, esp_timer_get_time};
@@ -91,17 +93,40 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut last_updated_at_a = 0;
     let mut last_updated_at_b = 0;
 
-    let mut counter:i32 = 0;
+    //Time-zoning
+    let location_name = "Europe/London";
+
+    let found = TZ_VARIANTS.iter().find(|v| {
+        v.name() == location_name
+    }).unwrap();
+
+    let fontBitmaps = [
+        include_bytes!("Fonts/Default/1.bmp"),
+        include_bytes!("Fonts/Default/2.bmp"),
+        include_bytes!("Fonts/Default/3.bmp"),
+        include_bytes!("Fonts/Default/4.bmp"),
+        include_bytes!("Fonts/Default/5.bmp"),
+        include_bytes!("Fonts/Default/6.bmp"),
+        include_bytes!("Fonts/Default/7.bmp"),
+        include_bytes!("Fonts/Default/8.bmp"),
+        include_bytes!("Fonts/Default/9.bmp"),
+    ];
+
     loop {
         let current_millis = unsafe {esp_timer_get_time()} / 1000;
         let difference = current_millis - request_millis;
         log::info!("Current Time difference: {} ms", difference);
         let current_millis = request_clock + difference;
         log::info!("Current Time: {} ms", current_millis);
-        let naive = DateTime::from_timestamp_millis(current_millis).expect("Invalid timestamp");
-        log::info!("Current Time naive: {}", naive.format("%Y-%m-%d %H:%M:%S"));
-        let date_string = format!("{}", naive.format("%d-%m-%Y"));
-        let time_string = format!("{}", naive.format("%H:%M:%S"));
+
+        //This is depricated but chrono tz unhappy otherwise
+        let mut naive = NaiveDateTime::from_timestamp_millis(current_millis).expect("Failed to convert time");
+        let zoned = found.from_utc_datetime(&naive);
+
+
+        log::info!("Current Time naive: {}", zoned.format("%Y-%m-%d %H:%M:%S"));
+        let date_string = format!("{}", zoned.format("%A %d %B %Y (%d/%m/%Y) WK %U"));
+        let time_string = format!("{}", zoned.format("%H%M%S"));
         //TODO: Timezones
 
         if (time_string != current_time) {
@@ -119,7 +144,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
         else if (date_string != current_date) {
             let white_pixels = AlwaysSame {value: Rgb565::WHITE};
-            display.set_pixels( 10,180,300,200, white_pixels.into_iter().take(490*20) )
+            display.set_pixels( 10,185,400,205, white_pixels.into_iter().take(500*20) )
                 .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
             let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::GREEN);
