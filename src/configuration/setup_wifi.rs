@@ -57,7 +57,8 @@ pub fn get_request(client: &mut HttpClient<EspHttpConnection>, url: String) -> a
 }
 
 pub fn get_request_raw(client: &mut HttpClient<EspHttpConnection>, url: String) -> anyhow::Result<Vec<u8>> {
-    // Prepare headers and URL
+    //TODO: add retry logic, fail gracefully
+    //Prepare headers and URL
     //Only HTTP for now, since SSL is a pain
     let headers = [];
 

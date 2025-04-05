@@ -42,14 +42,14 @@ const BASEURL: &str = std::env!("BASEURL");
 
 const DEBUG: &str = std::env!("DEBUG");
 
+const LOCATION: &str = std::env!("LOCATION");
+
 fn main() -> Result<(), Box<dyn Error>> {
-    let ISDEBUG: bool = DEBUG == "TRUE";
+    let is_debug: bool = DEBUG == "TRUE";
 
     // It is necessary to call this function once. Otherwise, some patches to the runtime
     // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
     esp_idf_sys::link_patches();
-
-    let mut delay = Ets;
 
     //Init Logging
     esp_idf_svc::log::EspLogger::initialize_default();
@@ -61,12 +61,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     //Display
     let mut display = setup_display(peripherals.pins, peripherals.spi2)?;
 
-    let blue_pixels = AlwaysSame {value: if (ISDEBUG) { Rgb565::BLUE } else { Rgb565::BLACK} };
-    display.set_pixels( 0,0,500,250, blue_pixels.into_iter().take(500*250) )
+    let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::BLUE } else { Rgb565::BLACK} };
+    display.set_pixels(0, 0, 500, 250, cls_pixels.into_iter().take(500*250) )
         .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
-    let red_pixels = AlwaysSame {value: if (ISDEBUG) { Rgb565::RED } else { Rgb565::BLACK } };
-    display.set_pixels( 0,250,500,350, red_pixels.into_iter().take(500 * 100) )
+    let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::RED } else { Rgb565::BLACK } };
+    display.set_pixels( 0,250,500,350, cls_pixels.into_iter().take(500 * 100) )
         .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
     log::info!("Cleared Display");
@@ -81,6 +81,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     )?;
 
     connect_wifi(&mut wifi)?;
+    //TODO: add retry logic here
+
     let mut client = HttpClient::wrap(EspHttpConnection::new(&Default::default())?);
     log::info!("Connected WiFi");
 
@@ -100,14 +102,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut last_updated_at_b = 0;
 
     //Time-zoning
-    let location_name = "Europe/London";
-
     let found = TZ_VARIANTS.iter().find(|v| {
-        v.name() == location_name
+        v.name() == LOCATION
     }).unwrap();
 
     //Temp, add env based font loading
-    let fontBitmaps = [
+    let font_bytes = [
         include_bytes!("Fonts/Default/0.bmp"),
         include_bytes!("Fonts/Default/1.bmp"),
         include_bytes!("Fonts/Default/2.bmp"),
@@ -119,8 +119,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         include_bytes!("Fonts/Default/8.bmp"),
         include_bytes!("Fonts/Default/9.bmp"),
     ];
-
-    let as_bmps = fontBitmaps.map(|data|  Bmp::<Rgb888>::from_slice(data).unwrap());
+    let font_bmps = font_bytes.map(|data|  Bmp::<Rgb888>::from_slice(data).unwrap());
 
     loop {
         let current_millis = unsafe {esp_timer_get_time()} / 1000;
@@ -129,21 +128,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         let current_millis = request_clock + difference;
         log::info!("Current Time: {} ms", current_millis);
 
-        //This is depricated but chrono tz unhappy otherwise
-        let mut naive = NaiveDateTime::from_timestamp_millis(current_millis).expect("Failed to convert time");
-        let zoned = found.from_utc_datetime(&naive);
+        let mut utc = NaiveDateTime::from_timestamp_millis(current_millis).expect("Failed to convert time");
+        let zoned_dt = found.from_utc_datetime(&utc);
 
-
-        log::info!("Current Time naive: {}", zoned.format("%Y-%m-%d %H:%M:%S"));
-        let date_string = format!("{}", zoned.format("%A %d %B %Y (%d/%m/%Y) WK %U"));
-        let time_string = format!("{}", zoned.format("%H%M%S"));
-
-        //TODO: Timezones
+        log::info!("Current Time naive: {}", zoned_dt.format("%Y-%m-%d %H:%M:%S"));
+        let date_string = format!("{}", zoned_dt.format("%A %d %B %Y (%d/%m/%Y) WK %U"));
+        let time_string = format!("{}", zoned_dt.format("%H%M%S"));
 
         if (time_string != current_time) {
             let def_scale : i32 = 5;
             let small_scale: i32 = 2;
-
             let offset_y : i32 = 10;
 
            for number in 0..time_string.len() {
@@ -152,7 +146,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                        let index: usize = c1.to_string().parse().unwrap();
 
                        let isSmall = number > 3;
-                       //AAAAAAAAAAAAa
+
                        let offset_x : i32 = if !isSmall {
                            10 + (number as i32 * ((def_scale * 15) + 20))
                        }
@@ -161,7 +155,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                        };
                        let scale : i32 = if isSmall { small_scale} else {def_scale};
 
-                       let pixels = as_bmps[index].pixels();
+                       let pixels = font_bmps[index].pixels();
 
                        for Pixel(position, color) in pixels {
                            let display_pixels = AlwaysSame { value: Rgb565::from(color) };
@@ -173,9 +167,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                                display_pixels.into_iter().take((scale * (scale + 1)) as usize))
                                .map_err(|_| Box::<dyn Error>::from("draw world"))?;
                        }
-
-                       //TODO: 1 should be smaller? (will break display clearing)
-
                    }
                }
            }
@@ -183,12 +174,12 @@ fn main() -> Result<(), Box<dyn Error>> {
             current_time = time_string;
         }
         else if (date_string != current_date) {
-            let white_pixels = AlwaysSame {value: if (ISDEBUG) { Rgb565::GREEN } else { Rgb565::BLACK } };
-            display.set_pixels( 10,185,450,205, white_pixels.into_iter().take(550*20) )
+            let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::GREEN } else { Rgb565::BLACK } };
+            display.set_pixels(10, 185, 450, 205, cls_pixels.into_iter().take(550*20) )
                 .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
-            let text_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
-            Text::new(&date_string, Point::new(10, 200), text_style)
+            let date_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+            Text::new(&date_string, Point::new(10, 200), date_style)
                 .draw(&mut display)
                 .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
@@ -209,7 +200,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             last_updated_at_b = current_millis;
         }
 
-        thread::sleep(Duration::from_millis(5));
-        thread::sleep(Duration::from_millis(5));
+        thread::sleep(Duration::from_millis(10));
     }
 }
