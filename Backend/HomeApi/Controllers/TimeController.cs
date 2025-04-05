@@ -1,13 +1,12 @@
-using System.Drawing.Imaging;
+
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using SixLabors.Fonts;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using Color = System.Drawing.Color;
-using PointF = System.Drawing.PointF;
+using SkiaSharp;
+using Svg.Skia;
 
 namespace HomeApi.Controllers;
 
@@ -24,31 +23,45 @@ public class TimeController : ControllerBase
     [HttpGet("Image/{no}")]
     public IActionResult GenerateBmp(int no)
     {
-        int width = 230, height = 100;
-        counter++;
-        using (var image = new Image<Rgba32>(width, height))
-        {
-            FontFamily fontFamily;
-            
-            if (!SystemFonts.TryGet("Comfortaa", out fontFamily))
-                throw new Exception($"Couldn't find font");
-            
-            Font font = fontFamily.CreateFont(32f, FontStyle.Regular);
+        var svg = LoadAndCustomizeSvg("hello, world");
+        var data = RenderSvgToPng(svg);
+        return File(data, "image/bmp");
+    }
+    
+    string LoadAndCustomizeSvg(string message)
+    {
+        string templatePath = Path.Combine("Templates", "Template0.svg");
+        string svg = System.IO.File.ReadAllText(templatePath);
+        svg =  svg.Replace("{{DESCRIPTION}}", message);
+        svg =  svg.Replace("{{DAY0HREF}}", "https://picsum.photos/200");
+        svg =  svg.Replace("{{IMAGE0}}", "https://picsum.photos/200");
 
-            var options = new TextOptions(font)
-            {
-                Dpi = 72,
-                KerningMode = KerningMode.Standard
-            };
+        return svg;
+    }
+    byte[] RenderSvgToPng(string svgContent, int width = 230, int height = 100)
+    {
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(svgContent));
+        var svg = new SKSvg();
+        svg.Load(stream);
 
-            image.Mutate(x => x.DrawText("API: " + counter, font,SixLabors.ImageSharp.Color.White, new SixLabors.ImageSharp.PointF(10,10)));
-            image.Mutate(x => x.DrawText("*Weather*", font,SixLabors.ImageSharp.Color.White, new SixLabors.ImageSharp.PointF(10,50)));
-            // Convert image to BMP format in memory
-            using (var ms = new MemoryStream())
-            {
-                image.Save(ms, new BmpEncoder());
-                return File(ms.ToArray(), "image/bmp");
-            }
-        }
+        var info = new SKImageInfo(width, height);
+        using var surface = SKSurface.Create(info);
+        var canvas = surface.Canvas;
+        canvas.Clear(SKColors.White);
+        
+        canvas.DrawPicture(svg.Picture, new SKPoint(0,0));
+
+        using var simage = surface.Snapshot();
+        using var data = simage.Encode(SKEncodedImageFormat.Png, 100);
+        
+
+        
+        using var inputStream = new MemoryStream(data.ToArray());
+        using Image image = Image.Load<Rgba32>(inputStream);
+
+        using var outputStream = new MemoryStream();
+        image.Save(outputStream, new BmpEncoder()); 
+
+        return outputStream.ToArray();
     }
 }
