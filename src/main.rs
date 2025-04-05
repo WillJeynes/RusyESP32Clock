@@ -100,6 +100,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         v.name() == location_name
     }).unwrap();
 
+    //Temp, add env based font loading
     let fontBitmaps = [
         include_bytes!("Fonts/Default/1.bmp"),
         include_bytes!("Fonts/Default/2.bmp"),
@@ -111,6 +112,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         include_bytes!("Fonts/Default/8.bmp"),
         include_bytes!("Fonts/Default/9.bmp"),
     ];
+
+    let as_bmps = fontBitmaps.map(|data|  Bmp::<Rgb565>::from_slice(data).unwrap());
+
+    
 
     loop {
         let current_millis = unsafe {esp_timer_get_time()} / 1000;
