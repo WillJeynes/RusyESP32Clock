@@ -1,6 +1,8 @@
 
 using System.Text;
+using HomeApi.Templates;
 using Microsoft.AspNetCore.Mvc;
+using RazorLight;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Bmp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -21,9 +23,9 @@ public class TimeController : ControllerBase
     }
     static int counter = 0;
     [HttpGet("WeatherImage")]
-    public IActionResult GenerateWeatherPng()
+    public async Task<IActionResult> GenerateWeatherPng()
     {
-        var svg = LoadAndCustomizeSvg("hello, world");
+        var svg = await LoadAndCustomizeSvg("*Weather*");
         var data = RenderSvgToPng(svg);
         return File(data, "image/png");
     }
@@ -37,28 +39,61 @@ public class TimeController : ControllerBase
             //TODO: configuration via frontend
             imageUrl = "http://localhost:5278/Time/WeatherImage";
         }
-        
-        using var httpClient = new HttpClient();
-        // Optionally set headers if needed (e.g., User-Agent)
-        var response = await httpClient.GetAsync(imageUrl);
 
-        response.EnsureSuccessStatusCode(); // Throw if not 2xx
-        var imageBytes = await response.Content.ReadAsByteArrayAsync();
-        var bmpBytes = RenderPngToBmp(imageBytes);
+        var pngBytes = await RetreiveImageAsync(imageUrl);
+        var bmpBytes = RenderPngToBmp(pngBytes);
 
         return File(bmpBytes, "image/bmp");
     }
     
-    string LoadAndCustomizeSvg(string message)
+    async Task<string> LoadAndCustomizeSvg(string message)
     {
-        string templatePath = Path.Combine("Templates", "Template0.svg");
-        string svg = System.IO.File.ReadAllText(templatePath);
-        //TODO: use a proper templating system (blazor?)
-        svg =  svg.Replace("{{DESCRIPTION}}", message);
-        svg =  svg.Replace("{{DAY0HREF}}", "https://picsum.photos/200");
-        svg =  svg.Replace("{{IMAGE0}}", "https://picsum.photos/200");
+        string templatePath = Path.Combine("Templates", "WeatherTemplate.svg");
+        string svg = await System.IO.File.ReadAllTextAsync(templatePath);
 
-        return svg;
+        var engine = new RazorLightEngineBuilder()
+            .UseEmbeddedResourcesProject(typeof(WeatherViewModel))
+            .SetOperatingAssembly(typeof(WeatherViewModel).Assembly)
+            .UseMemoryCachingProvider()
+            .Build();
+
+        WeatherViewModel model = new WeatherViewModel()
+        {
+            MainDescription = "BlazorWorld",
+            MainImage = "https://picsum.photos/200",
+            MainMax = 20,
+            MainMin = 10,
+            Days = new List<QuickEntry>()
+            {
+                new QuickEntry()
+                {
+                    Day = "1",
+                    Image = "https://picsum.photos/200"
+                },
+                new QuickEntry()
+                {
+                    Day = "2",
+                    Image = "https://picsum.photos/200"
+                },
+                new QuickEntry()
+                {
+                    Day = "3",
+                    Image = "https://picsum.photos/200"
+                },
+                new QuickEntry()
+                {
+                    Day = "4",
+                    Image = "https://picsum.photos/200"
+                },
+                new QuickEntry()
+                {
+                    Day = "5",
+                    Image = "https://picsum.photos/200"
+                },
+            }
+        };
+        
+        return await engine.CompileRenderStringAsync("templateKey", svg, model);
     }
     byte[] RenderSvgToPng(string svgContent, int width = 230, int height = 100)
     {
@@ -88,5 +123,14 @@ public class TimeController : ControllerBase
         image.Save(outputStream, new BmpEncoder()); 
 
         return outputStream.ToArray();
+    }
+
+    async Task<byte[]> RetreiveImageAsync(string imageUrl)
+    {
+        using var httpClient = new HttpClient();
+        var response = await httpClient.GetAsync(imageUrl);
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsByteArrayAsync();
     }
 }
