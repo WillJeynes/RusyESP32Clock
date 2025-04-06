@@ -57,40 +57,26 @@ public class TimeController : ControllerBase
             .UseMemoryCachingProvider()
             .Build();
 
+        var weatherResponse = await WeatherDataFetcher.GetWeatherForecastAsync(53.617068, -0.2111111);
+        var currentWmo =  WmoService.GetForCode(weatherResponse.current.weather_code, weatherResponse.current.is_day == 1);
+        weatherResponse.daily.time.RemoveAt(0);
+        weatherResponse.daily.weather_code.RemoveAt(0);
+        weatherResponse.daily.temperature_2m_mean.RemoveAt(0);
+        var daysWmo = weatherResponse.daily.weather_code.ConvertAll((item) =>  WmoService.GetForCode(item, true));
+        var entries = Enumerable.Range(0, 5).Select(index => 
+            new QuickEntry()
+            {
+                Day =  $"{DateTime.Parse(weatherResponse.daily.time[index]):ddd}: {(int)weatherResponse.daily.temperature_2m_mean[index]}", 
+                Image = daysWmo[index].image
+            }).ToList();
+        
         WeatherViewModel model = new WeatherViewModel()
         {
-            MainDescription = "BlazorWorld",
-            MainImage = "https://picsum.photos/200",
-            MainMax = 20,
-            MainMin = 10,
-            Days = new List<QuickEntry>()
-            {
-                new QuickEntry()
-                {
-                    Day = "1",
-                    Image = "https://picsum.photos/200"
-                },
-                new QuickEntry()
-                {
-                    Day = "2",
-                    Image = "https://picsum.photos/200"
-                },
-                new QuickEntry()
-                {
-                    Day = "3",
-                    Image = "https://picsum.photos/200"
-                },
-                new QuickEntry()
-                {
-                    Day = "4",
-                    Image = "https://picsum.photos/200"
-                },
-                new QuickEntry()
-                {
-                    Day = "5",
-                    Image = "https://picsum.photos/200"
-                },
-            }
+            MainDescription = currentWmo.description,
+            MainImage = currentWmo.image,
+            MainMax = (int)weatherResponse.daily.temperature_2m_max[0],
+            MainMin = (int)weatherResponse.daily.temperature_2m_min[0],
+            Days = entries
         };
         
         return await engine.CompileRenderStringAsync("templateKey", svg, model);
