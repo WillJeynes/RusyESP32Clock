@@ -1,4 +1,5 @@
 using System.Text;
+using HomeApi.Services.Interfaces;
 using RazorLight;
 using SkiaSharp;
 using Svg.Skia;
@@ -7,7 +8,7 @@ namespace HomeApi.Services;
 
 public class SvgService
 {
-    public static async Task<string> RetreiveSvgString<T>(string filePath, T viewModel)
+    public static async Task<string> RetreiveSvgString<T>(string filePath, T viewModel) where T : SvgViewModel
     {
         string templatePath = Path.Combine("Templates", filePath);
         string svg = await File.ReadAllTextAsync(templatePath);

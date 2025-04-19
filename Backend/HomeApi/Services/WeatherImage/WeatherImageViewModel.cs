@@ -1,6 +1,8 @@
+using HomeApi.Services.Interfaces;
+
 namespace HomeApi.Templates;
 
-public class WeatherViewModel
+public class WeatherImageViewModel : SvgViewModel
 {
     public string MainImage { get; set; }
     public string MainDescription { get; set; }
