@@ -25,7 +25,7 @@ use esp_idf_svc::http::client::EspHttpConnection;
 use esp_idf_svc::nvs::EspDefaultNvsPartition;
 use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
-use crate::configuration::setup_display::{setup_display, DisplayDriver, SimpleError};
+use crate::configuration::setup_display::{setup_display, ContextExt, DisplayDriver, SimpleError};
 use crate::configuration::setup_wifi::{connect_wifi, get_request, get_request_raw};
 use embedded_svc::{
     http::{client::Client as HttpClient},
@@ -70,11 +70,11 @@ fn main() -> anyhow::Result<()> {
 
     let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::BLUE } else { Rgb565::BLACK} };
     display.set_pixels(0, 0, 500, 250, cls_pixels.into_iter().take(500*250) )
-        .map_err(|e| SimpleError::new("Set Pixels"))?;
+        .draw_context()?;
 
     let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::RED } else { Rgb565::BLACK } };
     display.set_pixels( 0,250,500,350, cls_pixels.into_iter().take(500 * 100) )
-        .map_err(|e| SimpleError::new("Set Pixels"))?;
+        .draw_context()?;
 
     log::info!("Cleared Display");
 
@@ -198,7 +198,7 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
                                 (offset_x + (position.x + 1) * scale) as u16,
                                 (offset_y + (position.y + 1) * scale) as u16,
                                 display_pixels.into_iter().take((scale * (scale + 1)) as usize))
-                                .map_err(|e| SimpleError::new("Set Pixels"))?;;
+                                    .draw_context()?;
                         }
                     }
                 }
@@ -209,27 +209,35 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
         else if (date_string != current_date) {
             let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::GREEN } else { Rgb565::BLACK } };
             display.set_pixels(10, 185, 450, 205, cls_pixels.into_iter().take(550*20) )
-                .map_err(|e| SimpleError::new("Set Pixels"))?;
+                .draw_context()?;
 
             let date_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
             Text::new(&date_string, Point::new(10, 200), date_style)
                 .draw(display)
-                .map_err(|e| SimpleError::new("Set Pixels"))?;
+                .draw_context()?;
 
             current_date = date_string;
         }
         else if ((current_millis - last_updated_at_a) > 50000) {
-            let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/0", BASEURL)).map_err(|e| SimpleError::new("Set Pixels"))?;;
-            let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
-            Image::new(&bmp, Point::new( 10, 220)).draw(display).map_err(|e| SimpleError::new("Set Pixels"))?;;
-
+            let bmp_result = get_request_raw(&mut client, format!("{}/Time/Image/0", BASEURL));
+            if let Ok(bmp_data) = bmp_result {
+                let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
+                Image::new(&bmp, Point::new( 10, 220)).draw(display).draw_context()?;
+            }
+            else {
+                client = HttpClient::wrap(EspHttpConnection::new(&Default::default())?)
+            }
             last_updated_at_a = current_millis;
         }
         else if ((current_millis - last_updated_at_b) > 50000) {
-            let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/1", BASEURL)).map_err(|e| SimpleError::new("Set Pixels"))?;;
-            let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
-            Image::new(&bmp, Point::new( 250, 220)).draw(display).map_err(|e| SimpleError::new("Set Pixels"))?;;
-
+            let bmp_result = get_request_raw(&mut client, format!("{}/Time/Image/1", BASEURL));
+            if let Ok(bmp_data) = bmp_result {
+                let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
+                Image::new(&bmp, Point::new(250, 220)).draw(display).draw_context()?;
+            }
+            else {
+                client = HttpClient::wrap(EspHttpConnection::new(&Default::default())?)
+            }
             last_updated_at_b = current_millis;
         }
 
