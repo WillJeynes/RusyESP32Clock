@@ -86,3 +86,13 @@ impl core::fmt::Display for SimpleError {
 
 #[cfg(feature = "std")]
 impl std::error::Error for SimpleError {}
+
+pub trait ContextExt<T> {
+    fn with_context(self) -> Result<T, SimpleError>;
+}
+
+impl<T, E: std::fmt::Display> ContextExt<T> for Result<T, E> {
+    fn with_context(self) -> Result<T, SimpleError> {
+        self.map_err(|e| SimpleError::new("Unhandled Ex"))
+    }
+}
