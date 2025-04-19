@@ -16,6 +16,7 @@ use std::thread::sleep;
 use std::time::Duration;
 use chrono::{DateTime, NaiveDateTime, TimeZone};
 use chrono_tz::TZ_VARIANTS;
+use display_interface_spi::SPIInterfaceNoCS;
 use embedded_graphics::image::Image;
 use embedded_graphics::mono_font::iso_8859_16::FONT_10X20;
 use embedded_graphics::pixelcolor::{Rgb565, Rgb888};
@@ -24,7 +25,7 @@ use esp_idf_svc::http::client::EspHttpConnection;
 use esp_idf_svc::nvs::EspDefaultNvsPartition;
 use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
-use crate::configuration::setup_display::setup_display;
+use crate::configuration::setup_display::{setup_display, DisplayDriver};
 use crate::configuration::setup_wifi::{connect_wifi, get_request, get_request_raw};
 use embedded_svc::{
     http::{client::Client as HttpClient},
@@ -32,7 +33,13 @@ use embedded_svc::{
 use embedded_svc::http::status::INFO;
 use crate::utils::always_same::AlwaysSame;
 use esp_idf_hal::delay::Ets;
+use esp_idf_hal::gpio;
+use esp_idf_hal::gpio::{Gpio2, Gpio4, PinDriver};
+use esp_idf_hal::modem::Modem;
+use esp_idf_hal::spi::{SpiDeviceDriver, SpiDriver};
 use esp_idf_sys::{esp_task_wdt_reset, esp_timer_get_time};
+use mipidsi::Display;
+use mipidsi::models::ILI9341Rgb565;
 use tinybmp::Bmp;
 
 const SSID: &str = std::env!("SSID");
@@ -71,12 +78,29 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     log::info!("Cleared Display");
 
+    match run(peripherals.modem, &mut display) {
+        Ok(vak) => log::info!("Run successfully"),
+        Err(error) => draw_err(error, &mut display)
+    }
+
+    Ok(())
+}
+
+fn draw_err(err : Box<dyn Error>, display : &mut DisplayDriver) {
+    let error_style = MonoTextStyle::new(&FONT_10X20, Rgb565::RED);
+    Text::new(&format!("Unhandled Exception Occured: {}", err), Point::new(10, 50), error_style)
+        .draw(display)
+        .unwrap();
+}
+fn run(modem: Modem, mut display: &mut DisplayDriver) -> Result<(), Box<dyn Error>> {
+    let is_debug: bool = DEBUG == "TRUE";
+
     //Wi-Fi
     let sys_loop = EspSystemEventLoop::take()?;
     let nvs = EspDefaultNvsPartition::take()?;
 
     let mut wifi = BlockingWifi::wrap(
-        EspWifi::new(peripherals.modem, sys_loop.clone(), Some(nvs))?,
+        EspWifi::new(modem, sys_loop.clone(), Some(nvs))?,
         sys_loop,
     )?;
 
@@ -140,36 +164,36 @@ fn main() -> Result<(), Box<dyn Error>> {
             let small_scale: i32 = 2;
             let offset_y : i32 = 10;
 
-           for number in 0..time_string.len() {
-               if let (Some(c1), Some(c2)) = (time_string.chars().nth(number), current_time.chars().nth(number)) {
-                   if c1 != c2 {
-                       let index: usize = c1.to_string().parse().unwrap();
+            for number in 0..time_string.len() {
+                if let (Some(c1), Some(c2)) = (time_string.chars().nth(number), current_time.chars().nth(number)) {
+                    if c1 != c2 {
+                        let index: usize = c1.to_string().parse().unwrap();
 
-                       let isSmall = number > 3;
+                        let isSmall = number > 3;
 
-                       let offset_x : i32 = if !isSmall {
-                           10 + (number as i32 * ((def_scale * 15) + 20))
-                       }
-                       else {
-                           10 + (4 * ((def_scale * 15) + 20)) + ((number as i32- 4) * ((small_scale * 15) + 5))
-                       };
-                       let scale : i32 = if isSmall { small_scale} else {def_scale};
+                        let offset_x : i32 = if !isSmall {
+                            10 + (number as i32 * ((def_scale * 15) + 20))
+                        }
+                        else {
+                            10 + (4 * ((def_scale * 15) + 20)) + ((number as i32- 4) * ((small_scale * 15) + 5))
+                        };
+                        let scale : i32 = if isSmall { small_scale} else {def_scale};
 
-                       let pixels = font_bmps[index].pixels();
+                        let pixels = font_bmps[index].pixels();
 
-                       for Pixel(position, color) in pixels {
-                           let display_pixels = AlwaysSame { value: Rgb565::from(color) };
-                           display.set_pixels(
-                               (offset_x + position.x * scale) as u16,
-                               (offset_y + position.y * scale) as u16,
-                               (offset_x + (position.x + 1) * scale) as u16,
-                               (offset_y + (position.y + 1) * scale) as u16,
-                               display_pixels.into_iter().take((scale * (scale + 1)) as usize))
-                               .map_err(|_| Box::<dyn Error>::from("draw world"))?;
-                       }
-                   }
-               }
-           }
+                        for Pixel(position, color) in pixels {
+                            let display_pixels = AlwaysSame { value: Rgb565::from(color) };
+                            display.set_pixels(
+                                (offset_x + position.x * scale) as u16,
+                                (offset_y + position.y * scale) as u16,
+                                (offset_x + (position.x + 1) * scale) as u16,
+                                (offset_y + (position.y + 1) * scale) as u16,
+                                display_pixels.into_iter().take((scale * (scale + 1)) as usize))
+                                .map_err(|_| Box::<dyn Error>::from("draw world"))?;
+                        }
+                    }
+                }
+            }
 
             current_time = time_string;
         }
@@ -180,7 +204,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
             let date_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
             Text::new(&date_string, Point::new(10, 200), date_style)
-                .draw(&mut display)
+                .draw(display)
                 .map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
             current_date = date_string;
@@ -188,14 +212,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         else if ((current_millis - last_updated_at_a) > 50000) {
             let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/0", BASEURL)).map_err(|_| Box::<dyn Error>::from("draw world"))?;
             let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
-            Image::new(&bmp, Point::new( 10, 220)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+            Image::new(&bmp, Point::new( 10, 220)).draw(display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
             last_updated_at_a = current_millis;
         }
         else if ((current_millis - last_updated_at_b) > 50000) {
             let bmp_data = get_request_raw(&mut client, format!("{}/Time/Image/1", BASEURL)).map_err(|_| Box::<dyn Error>::from("draw world"))?;
             let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
-            Image::new(&bmp, Point::new( 250, 220)).draw(&mut display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
+            Image::new(&bmp, Point::new( 250, 220)).draw(display).map_err(|_| Box::<dyn Error>::from("draw world"))?;
 
             last_updated_at_b = current_millis;
         }
