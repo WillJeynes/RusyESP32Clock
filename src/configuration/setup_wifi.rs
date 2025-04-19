@@ -1,4 +1,3 @@
-use std::error::Error;
 use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
 use crate::{PASSWORD, SSID};
 use embedded_svc::{

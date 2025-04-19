@@ -10,7 +10,6 @@ use embedded_graphics::{
     geometry::Point,
 };
 use esp_idf_svc::hal::{prelude::Peripherals};
-use std::error::Error;
 use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
@@ -25,7 +24,7 @@ use esp_idf_svc::http::client::EspHttpConnection;
 use esp_idf_svc::nvs::EspDefaultNvsPartition;
 use esp_idf_svc::wifi::{BlockingWifi, EspWifi};
 use esp_idf_sys as _; // If using the `binstart` feature of `esp-idf-sys`, always keep this module imported
-use crate::configuration::setup_display::{setup_display, ContextExt, DisplayDriver, SimpleError};
+use crate::configuration::setup_display::{setup_display, DisplayDriver};
 use crate::configuration::setup_wifi::{connect_wifi, get_request, get_request_raw};
 use embedded_svc::{
     http::{client::Client as HttpClient},
@@ -41,6 +40,7 @@ use esp_idf_sys::{esp_task_wdt_reset, esp_timer_get_time};
 use mipidsi::Display;
 use mipidsi::models::ILI9341Rgb565;
 use tinybmp::Bmp;
+use crate::utils::simple_error::ContextExt;
 
 const SSID: &str = std::env!("SSID");
 const PASSWORD: &str = std::env!("PASSWORD");

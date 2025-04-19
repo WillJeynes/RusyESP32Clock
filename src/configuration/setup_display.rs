@@ -1,4 +1,3 @@
-use std::error::Error;
 use display_interface_spi::SPIInterfaceNoCS;
 use esp_idf_hal::delay::Ets;
 use esp_idf_hal::gpio;
@@ -8,6 +7,7 @@ use esp_idf_hal::spi::config::{Config, DriverConfig};
 use esp_idf_hal::spi::{Dma, SpiDeviceDriver, SpiDriver, SPI2};
 use mipidsi::{Builder, Display};
 use mipidsi::models::ILI9341Rgb565;
+use crate::utils::simple_error::SimpleError;
 
 pub type SpiDisplayInterface = SPIInterfaceNoCS<
     SpiDeviceDriver<'static, SpiDriver<'static>>,
@@ -54,7 +54,7 @@ pub fn setup_display(pins : Pins, spi : SPI2) -> anyhow::Result<DisplayDriver>
     let display = Builder::ili9341_rgb565(di)
         .with_color_order(mipidsi::ColorOrder::Bgr)
         .with_orientation(mipidsi::options::Orientation::Landscape(false))  // Mirror on text
-        .init(&mut delay, Some(rst)).map_err(|e| SimpleError::new("ESP Init"))?;
+        .init(&mut delay, Some(rst)).map_err(|_| SimpleError::new("ESP Init"))?;
 
 
     // Pin 27, Backlight
@@ -65,34 +65,4 @@ pub fn setup_display(pins : Pins, spi : SPI2) -> anyhow::Result<DisplayDriver>
     core::mem::forget(bl);
 
     Ok(display)
-}
-
-#[derive(Debug)]
-pub struct SimpleError {
-    description: &'static str,
-}
-
-impl SimpleError {
-    pub fn new(description: &'static str) -> Self {
-        Self { description }
-    }
-}
-
-impl core::fmt::Display for SimpleError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "{}", self.description)
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for SimpleError {}
-
-pub trait ContextExt<T> {
-    fn draw_context(self) -> Result<T, SimpleError>;
-}
-
-impl<T, E> ContextExt<T> for Result<T, E> {
-    fn draw_context(self) -> Result<T, SimpleError> {
-        self.map_err(|e| SimpleError::new("Unhandled Draw Ex"))
-    }
 }
