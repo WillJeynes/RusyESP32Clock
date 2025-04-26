@@ -40,6 +40,7 @@ use esp_idf_sys::{esp_task_wdt_reset, esp_timer_get_time};
 use mipidsi::Display;
 use mipidsi::models::ILI9341Rgb565;
 use tinybmp::Bmp;
+use crate::utils::screen_utils::{clear_screen, draw_text};
 use crate::utils::simple_error::ContextExt;
 
 const SSID: &str = std::env!("SSID");
@@ -68,18 +69,9 @@ fn main() -> anyhow::Result<()> {
     //Display
     let mut display = setup_display(peripherals.pins, peripherals.spi2)?;
 
-    let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::BLUE } else { Rgb565::BLACK} };
-    display.set_pixels(0, 0, 500, 250, cls_pixels.into_iter().take(500*250) )
-        .draw_context()?;
+    clear_screen(&mut display, if (is_debug) { Rgb565::BLUE } else { Rgb565::BLACK})?;
 
-    let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::RED } else { Rgb565::BLACK } };
-    display.set_pixels( 0,250,500,350, cls_pixels.into_iter().take(500 * 100) )
-        .draw_context()?;
-
-    let loading_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
-    Text::new("Loading...", Point::new(10, 10), loading_style)
-        .draw(&mut display)
-        .draw_context()?;
+    draw_text(&mut display, "Loading...", Point::new(10, 10), Rgb565::WHITE)?;
 
     log::info!("Cleared Display");
 
@@ -92,10 +84,7 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn draw_err(err : anyhow::Error, display : &mut DisplayDriver) {
-    let error_style = MonoTextStyle::new(&FONT_10X20, Rgb565::RED);
-    Text::new(&format!("Ex: {}", err), Point::new(10, 50), error_style)
-        .draw(display)
-        .unwrap();
+    draw_text(display, &format!("Ex: {}", err), Point::new(10, 50), Rgb565::RED).unwrap();
 }
 fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
     let is_debug: bool = DEBUG == "TRUE";
@@ -159,9 +148,7 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
     ];
     let font_bmps = font_bytes.map(|data|  Bmp::<Rgb888>::from_slice(data).unwrap());
 
-    let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::BLUE } else { Rgb565::BLACK} };
-    display.set_pixels(0, 0, 500, 250, cls_pixels.into_iter().take(500*250) )
-        .draw_context()?;
+    clear_screen(&mut display, if (is_debug) { Rgb565::BLUE } else { Rgb565::BLACK})?;
 
     loop {
         let current_millis = unsafe {esp_timer_get_time()} / 1000;
@@ -220,10 +207,7 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
             display.set_pixels(10, 185, 450, 205, cls_pixels.into_iter().take(550*20) )
                 .draw_context()?;
 
-            let date_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
-            Text::new(&date_string, Point::new(10, 200), date_style)
-                .draw(display)
-                .draw_context()?;
+            draw_text(display, &date_string, Point::new(10, 200), Rgb565::WHITE)?;
 
             current_date = date_string;
         }
