@@ -2,6 +2,7 @@ extern crate core;
 
 mod configuration;
 mod utils;
+mod font_bytes;
 
 use embedded_graphics::{
     mono_font::{MonoTextStyle},
@@ -51,6 +52,8 @@ const BASEURL: &str = std::env!("BASEURL");
 const DEBUG: &str = std::env!("DEBUG");
 
 const LOCATION: &str = std::env!("LOCATION");
+
+include!(concat!(env!("OUT_DIR"), "/font_bytes.rs"));
 
 fn main() -> anyhow::Result<()> {
     let is_debug: bool = DEBUG == "TRUE";
@@ -133,20 +136,7 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
         v.name() == LOCATION
     }).unwrap();
 
-    //Temp, add env based font loading
-    let font_bytes = [
-        include_bytes!("Fonts/Default/0.bmp"),
-        include_bytes!("Fonts/Default/1.bmp"),
-        include_bytes!("Fonts/Default/2.bmp"),
-        include_bytes!("Fonts/Default/3.bmp"),
-        include_bytes!("Fonts/Default/4.bmp"),
-        include_bytes!("Fonts/Default/5.bmp"),
-        include_bytes!("Fonts/Default/6.bmp"),
-        include_bytes!("Fonts/Default/7.bmp"),
-        include_bytes!("Fonts/Default/8.bmp"),
-        include_bytes!("Fonts/Default/9.bmp"),
-    ];
-    let font_bmps = font_bytes.map(|data|  Bmp::<Rgb888>::from_slice(data).unwrap());
+    let font_bmps = FONT_BYTES.map(|data|  Bmp::<Rgb888>::from_slice(data).unwrap());
 
     clear_screen(&mut display, if (is_debug) { Rgb565::BLUE } else { Rgb565::BLACK})?;
 
