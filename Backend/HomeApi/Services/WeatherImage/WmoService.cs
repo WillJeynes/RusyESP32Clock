@@ -7,7 +7,7 @@ public class WmoService
     public static WeatherInfo GetForCode(int code, bool isDay)
     {
 
-        string templatePath = Path.Combine("Templates", "WmoCodes.json");
+        string templatePath = Path.Combine("Assets", "WmoCodes.json");
 
         var json = File.ReadAllText(templatePath);
         var weatherData = JsonConvert.DeserializeObject<Dictionary<string, WeatherEntry>>(json);
