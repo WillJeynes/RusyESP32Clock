@@ -53,7 +53,18 @@ const DEBUG: &str = std::env!("DEBUG");
 
 const LOCATION: &str = std::env!("LOCATION");
 
-include!(concat!(env!("OUT_DIR"), "/font_bytes.rs"));
+#[cfg(not(feature = "build-real-fonts"))]
+mod generated {
+    //Dummy result
+    include!("font_bytes.rs");
+}
+
+#[cfg(feature = "build-real-fonts")]
+mod generated {
+    include!(concat!(env!("OUT_DIR"), "/font_bytes.rs"));
+}
+
+use generated::FONT_BYTES;
 
 fn main() -> anyhow::Result<()> {
     let is_debug: bool = DEBUG == "TRUE";
@@ -121,7 +132,7 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
 
     // GET
     let request_string = get_request(&mut client, format!("{}/Time/GetCurrentTime", BASEURL))?;
-    let request_clock = request_string.parse::<i64>().unwrap();
+    let request_clock = request_string.parse::<i64>()?;
     let request_millis = unsafe {esp_timer_get_time()} / 1000;
     log::info!("Got Time Request {} at {}",request_string,  request_millis);
 
@@ -147,7 +158,7 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
         let current_millis = request_clock + difference;
         log::info!("Current Time: {} ms", current_millis);
 
-        let mut utc = NaiveDateTime::from_timestamp_millis(current_millis).expect("Failed to convert time");
+        let utc = NaiveDateTime::from_timestamp_millis(current_millis).expect("Failed to convert time");
         let zoned_dt = found.from_utc_datetime(&utc);
 
         log::info!("Current Time naive: {}", zoned_dt.format("%Y-%m-%d %H:%M:%S"));
