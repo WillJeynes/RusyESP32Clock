@@ -53,18 +53,7 @@ const DEBUG: &str = std::env!("DEBUG");
 
 const LOCATION: &str = std::env!("LOCATION");
 
-#[cfg(not(feature = "build-real-fonts"))]
-mod generated {
-    //Dummy result
-    include!("font_bytes.rs");
-}
-
-#[cfg(feature = "build-real-fonts")]
-mod generated {
-    include!(concat!(env!("OUT_DIR"), "/font_bytes.rs"));
-}
-
-use generated::FONT_BYTES;
+include!(concat!(env!("OUT_DIR"), "/font_bytes.rs"));
 
 fn main() -> anyhow::Result<()> {
     let is_debug: bool = DEBUG == "TRUE";
