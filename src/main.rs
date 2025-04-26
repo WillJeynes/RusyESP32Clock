@@ -76,6 +76,11 @@ fn main() -> anyhow::Result<()> {
     display.set_pixels( 0,250,500,350, cls_pixels.into_iter().take(500 * 100) )
         .draw_context()?;
 
+    let loading_style = MonoTextStyle::new(&FONT_10X20, Rgb565::WHITE);
+    Text::new("Loading...", Point::new(10, 10), loading_style)
+        .draw(&mut display)
+        .draw_context()?;
+
     log::info!("Cleared Display");
 
     match run(peripherals.modem, &mut display) {
@@ -153,6 +158,10 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
         include_bytes!("Fonts/Default/9.bmp"),
     ];
     let font_bmps = font_bytes.map(|data|  Bmp::<Rgb888>::from_slice(data).unwrap());
+
+    let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::BLUE } else { Rgb565::BLACK} };
+    display.set_pixels(0, 0, 500, 250, cls_pixels.into_iter().take(500*250) )
+        .draw_context()?;
 
     loop {
         let current_millis = unsafe {esp_timer_get_time()} / 1000;
