@@ -4,9 +4,9 @@ use embedded_graphics::image::Image;
 use embedded_graphics::pixelcolor::Rgb565;
 use esp_idf_svc::http::client::EspHttpConnection;
 use crate::configuration::setup_display::DisplayDriver;
-use crate::configuration::setup_wifi::get_request_raw;
 use embedded_svc::http::client::Client;
 use tinybmp::Bmp;
+use crate::utils::http_utils::get_request_raw;
 use crate::utils::simple_error::ContextExt;
 
 pub fn draw_image(mut display: &mut DisplayDriver, client: &mut Client<EspHttpConnection>, url: String, point: Point) -> anyhow::Result<()> {
