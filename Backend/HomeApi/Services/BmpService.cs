@@ -43,6 +43,14 @@ public class BmpService
 
                 Cache.AddOrUpdate(url, bmpBytes);
             }
+            catch (TaskCanceledException)
+            {
+                Cache.AddOrUpdate(url, await CreateFallbackImage("Request timeout"));
+            }
+            catch (HttpRequestException ex)
+            {
+                Cache.AddOrUpdate(url, await CreateFallbackImage($"Received: {ex.StatusCode}"));
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to fetch image from {url}: {ex.Message}");
