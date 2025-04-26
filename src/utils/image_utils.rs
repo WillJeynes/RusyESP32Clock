@@ -10,7 +10,7 @@ use crate::utils::http_utils::get_request_raw;
 use crate::utils::simple_error::ContextExt;
 
 pub fn draw_image(mut display: &mut DisplayDriver, client: &mut Client<EspHttpConnection>, url: String, point: Point) -> anyhow::Result<()> {
-    let bmp_result = get_request_raw(client, url);
+    let bmp_result = get_request_raw(client, url, 100_000);
     if let Ok(bmp_data) = bmp_result {
         let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).map_err(|_| anyhow::anyhow!("BMP parse failed"))?;
         Image::new(&bmp, point).draw(display).draw_context()?;

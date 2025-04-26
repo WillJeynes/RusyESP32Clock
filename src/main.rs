@@ -121,7 +121,7 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
 
 
     // GET
-    let request_string = get_request(&mut client, format!("{}/Time/GetCurrentTime", BASEURL))?;
+    let request_string = get_request(&mut client, format!("{}/Time/GetCurrentTime", BASEURL), 1024)?;
     let request_clock = request_string.parse::<i64>()?;
     let request_millis = unsafe {esp_timer_get_time()} / 1000;
     log::info!("Got Time Request {} at {}",request_string,  request_millis);
