@@ -40,7 +40,8 @@ use esp_idf_sys::{esp_task_wdt_reset, esp_timer_get_time};
 use mipidsi::Display;
 use mipidsi::models::ILI9341Rgb565;
 use tinybmp::Bmp;
-use crate::utils::screen_utils::{clear_screen, draw_pixels_at_scale, draw_text};
+use crate::utils::image_utils::draw_image;
+use crate::utils::screen_utils::{clear_screen, draw_box, draw_pixels_at_scale, draw_text};
 use crate::utils::simple_error::ContextExt;
 
 const SSID: &str = std::env!("SSID");
@@ -133,8 +134,9 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
     //Time-zoning
     let found = TZ_VARIANTS.iter().find(|v| {
         v.name() == LOCATION
-    }).unwrap();
+    }).draw_context()?;
 
+    //Editors do not like this line, since FONT_BYTES does not exist until build-time
     let font_bmps = FONT_BYTES.map(|data|  Bmp::<Rgb888>::from_slice(data).unwrap());
 
     clear_screen(&mut display, if (is_debug) { Rgb565::BLUE } else { Rgb565::BLACK})?;
@@ -183,33 +185,25 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
             current_time = time_string;
         }
         else if (date_string != current_date) {
-            //TODO: draw box helper method
-            let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::GREEN } else { Rgb565::BLACK } };
-            display.set_pixels(10, 185, 450, 205, cls_pixels.into_iter().take(550*20) )
-                .draw_context()?;
+            draw_box(display, if (is_debug) { Rgb565::GREEN } else { Rgb565::BLACK },
+                     10, 185, 450, 205)?;
 
             draw_text(display, &date_string, Point::new(10, 200), Rgb565::WHITE)?;
 
             current_date = date_string;
         }
         else if ((current_millis - last_updated_at_a) > 50000) {
-            let bmp_result = get_request_raw(&mut client, format!("{}/Time/Image/0", BASEURL));
-            if let Ok(bmp_data) = bmp_result {
-                let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
-                Image::new(&bmp, Point::new( 10, 220)).draw(display).draw_context()?;
-            }
-            else {
+            let result = draw_image(display, &mut client, format!("{}/Time/Image/0", BASEURL), Point::new(10,220));
+            if result.is_err() {
+                //Reset client
                 client = HttpClient::wrap(EspHttpConnection::new(&Default::default())?)
             }
             last_updated_at_a = current_millis;
         }
         else if ((current_millis - last_updated_at_b) > 50000) {
-            let bmp_result = get_request_raw(&mut client, format!("{}/Time/Image/1", BASEURL));
-            if let Ok(bmp_data) = bmp_result {
-                let bmp = Bmp::<Rgb565>::from_slice(&bmp_data).unwrap();
-                Image::new(&bmp, Point::new(250, 220)).draw(display).draw_context()?;
-            }
-            else {
+            let result = draw_image(display, &mut client, format!("{}/Time/Image/1", BASEURL), Point::new(250,220));
+            if result.is_err() {
+                //Reset client
                 client = HttpClient::wrap(EspHttpConnection::new(&Default::default())?)
             }
             last_updated_at_b = current_millis;

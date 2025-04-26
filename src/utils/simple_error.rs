@@ -27,3 +27,12 @@ impl<T, E> ContextExt<T> for Result<T, E> {
         self.map_err(|_| SimpleError::new("Unhandled Draw Ex"))
     }
 }
+
+impl<T> ContextExt<T> for Option<T> {
+    fn draw_context(self) -> Result<T, SimpleError> {
+        match self {
+            None => { Err(SimpleError::new("Unhandled Draw Ex")) }
+            Some(v) => { Ok(v) }
+        }
+    }
+}
