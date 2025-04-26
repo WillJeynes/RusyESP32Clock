@@ -2,7 +2,6 @@ extern crate core;
 
 mod configuration;
 mod utils;
-mod font_bytes;
 
 use embedded_graphics::{
     mono_font::{MonoTextStyle},
@@ -41,7 +40,7 @@ use esp_idf_sys::{esp_task_wdt_reset, esp_timer_get_time};
 use mipidsi::Display;
 use mipidsi::models::ILI9341Rgb565;
 use tinybmp::Bmp;
-use crate::utils::screen_utils::{clear_screen, draw_text};
+use crate::utils::screen_utils::{clear_screen, draw_pixels_at_scale, draw_text};
 use crate::utils::simple_error::ContextExt;
 
 const SSID: &str = std::env!("SSID");
@@ -56,8 +55,6 @@ const LOCATION: &str = std::env!("LOCATION");
 include!(concat!(env!("OUT_DIR"), "/font_bytes.rs"));
 
 fn main() -> anyhow::Result<()> {
-    let is_debug: bool = DEBUG == "TRUE";
-
     // It is necessary to call this function once. Otherwise, some patches to the runtime
     // implemented by esp-idf-sys might not link properly. See https://github.com/esp-rs/esp-idf-template/issues/71
     esp_idf_sys::link_patches();
@@ -72,14 +69,8 @@ fn main() -> anyhow::Result<()> {
     //Display
     let mut display = setup_display(peripherals.pins, peripherals.spi2)?;
 
-    clear_screen(&mut display, if (is_debug) { Rgb565::BLUE } else { Rgb565::BLACK})?;
-
-    draw_text(&mut display, "Loading...", Point::new(10, 10), Rgb565::WHITE)?;
-
-    log::info!("Cleared Display");
-
     match run(peripherals.modem, &mut display) {
-        Ok(vak) => log::info!("Run successfully"),
+        Ok(_) => log::error!("Program Finished Executing :/"),
         Err(error) => draw_err(error, &mut display)
     }
 
@@ -87,10 +78,18 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn draw_err(err : anyhow::Error, display : &mut DisplayDriver) {
+    log::error!("Ex: {}", err);
     draw_text(display, &format!("Ex: {}", err), Point::new(10, 50), Rgb565::RED).unwrap();
 }
+
 fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
     let is_debug: bool = DEBUG == "TRUE";
+
+    clear_screen(&mut display, if (is_debug) { Rgb565::BLUE } else { Rgb565::BLACK})?;
+
+    draw_text(&mut display, "Loading...", Point::new(10, 10), Rgb565::WHITE)?;
+
+    log::info!("Cleared Display");
 
     //Wi-Fi
     let sys_loop = EspSystemEventLoop::take()?;
@@ -176,16 +175,7 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
 
                         let pixels = font_bmps[index].pixels();
 
-                        for Pixel(position, color) in pixels {
-                            let display_pixels = AlwaysSame { value: Rgb565::from(color) };
-                            display.set_pixels(
-                                (offset_x + position.x * scale) as u16,
-                                (offset_y + position.y * scale) as u16,
-                                (offset_x + (position.x + 1) * scale) as u16,
-                                (offset_y + (position.y + 1) * scale) as u16,
-                                display_pixels.into_iter().take((scale * (scale + 1)) as usize))
-                                    .draw_context()?;
-                        }
+                        draw_pixels_at_scale(display, pixels, Point::new(offset_x, offset_y), scale)?;
                     }
                 }
             }
@@ -193,6 +183,7 @@ fn run(modem: Modem, mut display: &mut DisplayDriver) -> anyhow::Result<()> {
             current_time = time_string;
         }
         else if (date_string != current_date) {
+            //TODO: draw box helper method
             let cls_pixels = AlwaysSame {value: if (is_debug) { Rgb565::GREEN } else { Rgb565::BLACK } };
             display.set_pixels(10, 185, 450, 205, cls_pixels.into_iter().take(550*20) )
                 .draw_context()?;
