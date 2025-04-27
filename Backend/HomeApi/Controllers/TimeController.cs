@@ -21,7 +21,11 @@ public class TimeController : ControllerBase
         if (no == 0)
         {
             //TODO: configuration via frontend
-            imageUrl = "http://localhost:5278/WeatherImage/Main?lat=53.617068&long=-0.2111111";
+            imageUrl = "http://localhost:5278/Weather/Main?lat=53.617068&long=-0.2111111";
+        }
+        else if (no == 1)
+        {
+            imageUrl = "http://localhost:5278/Sunup/Main?lat=53.617068&long=-0.2111111";
         }
         //END TEMP DEMO
         

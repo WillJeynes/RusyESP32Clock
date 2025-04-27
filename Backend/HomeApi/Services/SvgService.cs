@@ -8,7 +8,7 @@ namespace HomeApi.Services;
 
 public class SvgService
 {
-    public static async Task<string> RetreiveSvgString<T>(string filePath, T viewModel) where T : SvgViewModel
+    public static async Task<string> RetreiveSvgString<T>(string filePath, T viewModel) where T : ISvgViewModel
     {
         string templatePath = Path.Combine("Templates", filePath);
         string svg = await File.ReadAllTextAsync(templatePath);

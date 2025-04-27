@@ -2,7 +2,7 @@ using HomeApi.Services.Interfaces;
 
 namespace HomeApi.Templates;
 
-public class WeatherImageViewModel : SvgViewModel
+public class WeatherImageViewModel : ISvgViewModel
 {
     public string MainImage { get; set; }
     public string MainDescription { get; set; }

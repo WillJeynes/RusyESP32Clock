@@ -6,7 +6,7 @@ namespace HomeApi.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class WeatherImageController : ControllerBase
+public class WeatherController : ControllerBase
 {
     [HttpGet("Main")]
     public async Task<IActionResult> GenerateWeatherPng([FromQuery] double lat, [FromQuery] double lng)

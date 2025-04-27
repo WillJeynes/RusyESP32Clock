@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 100">
+    <rect width="230" height="100" style="stroke: rgb(0, 0, 0);"/>
+    <image href="@Model.Url "
+           width="150" height="150" transform="" x="@Model.Pos" y="-25"/>
+    <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 30px; white-space: pre;stroke: rgb(0,0,0);" x="10" y="40">@Model.SunupTime</text>
+    <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 30px; white-space: pre;stroke: rgb(0,0,0);" x="10" y="80">@Model.SundownTime</text>
+</svg>
