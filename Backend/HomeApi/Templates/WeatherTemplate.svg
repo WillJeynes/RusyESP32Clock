@@ -1,51 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 100">
-  <rect width="230" height="100" style="stroke: rgb(255, 255, 255);"/>
-  
-  <!--  Today -->
-  <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 20px; white-space: pre;" x="53.706" y="19.482">@Model.MainDescription</text>
-  <image href="@Model.MainImage" width="76.495" height="67.994" x="-5.176" y="-4.98" style="" transform="matrix(0.673322, 0, 0, 0.754986, 4.87195, 4.333)">
-  </image>
+  <!-- Background -->
+  <rect width="230" height="100" fill="#000000" />
+  <rect width="230" height="100" fill="#1e1e2f" rx="10" ry="10"/>
 
-  <!-- Today/Temperatures -->
-  <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 20px; white-space: pre;" x="74.189" y="43.274" font-weight="bold">@Model.MainMax°C</text>
-  <image href="http://127.0.0.1:5278/WeatherAssets/High.png" width="20" height="20" x="54.189" y="27.274" >
-  </image>
-  <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 20px; white-space: pre;" x="154.189" y="43.274">@Model.MainMin°C</text>
-  <image href="http://127.0.0.1:5278/WeatherAssets/Low.png" width="20" height="20" x="134.189" y="27.274" >
-  </image>
-  
-  <!--  Days -->
-  <rect y="54" width="46" height="46" style="fill: none; fill-rule: nonzero; stroke: rgb(255, 255, 255);"/>
-  <rect y="54" width="46" height="46" style="fill: none; fill-rule: nonzero; stroke: rgb(255, 255, 255);" x="46"/>
-  <rect y="54" width="46" height="46" style="fill: none; fill-rule: nonzero; stroke: rgb(255, 255, 255);" x="92"/>
-  <rect y="54" width="46" height="46" style="fill: none; fill-rule: nonzero; stroke: rgb(255, 255, 255);" x="138"/>
-  <rect y="54" width="46" height="46" style="fill: none; fill-rule: nonzero; stroke: rgb(255, 255, 255);" x="184"/>
+  <!-- Main Weather Description -->
+  <text x="60" y="18" fill="#ffffff" font-family="Arial, sans-serif" font-size="14" font-weight="bold">
+    @Model.MainDescription
+  </text>
 
-  <!--  Days/0 -->
-  <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 15px; white-space: pre; text-anchor: middle;" x="3.11" y="94.747" transform="matrix(0.697391, 0, 0, 1, 20.406, 1.04574)">@Model.Days[0].Day</text>
-  <image href="@Model.Days[0].Image" width="76.495" height="67.994" x="-5.176" y="-4.98" style="" transform="matrix(0.501733, 0, 0, 0.380039, 5.7507, 58.5023)">
-  </image>
+  <!-- Main Weather Icon -->
+  <image href="@Model.MainImage" width="50" height="50" x="6" y="0" />
 
-  <!--  Days/1 -->
-  <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 15px; white-space: pre; text-anchor: middle;" x="70" y="94.747" transform="matrix(0.697391, 0, 0, 1, 20.406, 1.04574)">@Model.Days[1].Day</text>
-  <image href="@Model.Days[1].Image" width="76.495" height="67.994" x="90" y="-4.98" style="" transform="matrix(0.501733, 0, 0, 0.380039, 5.7507, 58.5023)">
-  </image>
+  <!-- Max Temp -->
+  <image href="http://127.0.0.1:5278/WeatherAssets/High.png" width="16" height="16" x="60" y="25" />
+  <text x="80" y="38" fill="#ffffff" font-family="Arial, sans-serif" font-size="14" font-weight="bold">
+    @Model.MainMax°C
+  </text>
 
-  <!--  Days/2 -->
-  <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 15px; white-space: pre; text-anchor: middle;" x="135" y="94.747" transform="matrix(0.697391, 0, 0, 1, 20.406, 1.04574)">@Model.Days[2].Day</text>
-  <image href="@Model.Days[2].Image" width="76.495" height="67.994" x="180" y="-4.98" style="" transform="matrix(0.501733, 0, 0, 0.380039, 5.7507, 58.5023)">
-  </image>
+  <!-- Min Temp -->
+  <image href="http://127.0.0.1:5278/WeatherAssets/Low.png" width="16" height="16" x="150" y="25" />
+  <text x="170" y="38" fill="#ffffff" font-family="Arial, sans-serif" font-size="14">
+    @Model.MainMin°C
+  </text>
 
-  <!--  Days/3 -->
-  <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 15px; white-space: pre; text-anchor: middle;" x="200" y="94.747" transform="matrix(0.697391, 0, 0, 1, 20.406, 1.04574)">@Model.Days[3].Day</text>
-  <image href="@Model.Days[3].Image" width="76.495" height="67.994" x="270" y="-4.98" style="" transform="matrix(0.501733, 0, 0, 0.380039, 5.7507, 58.5023)">
-  </image>
-
-  <!--  Days/4 -->
-  <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 15px; white-space: pre; text-anchor: middle;" x="265" y="94.747" transform="matrix(0.697391, 0, 0, 1, 20.406, 1.04574)">@Model.Days[4].Day</text>
-  <image href="@Model.Days[4].Image" width="76.495" height="67.994" x="360" y="-4.98" style="" transform="matrix(0.501733, 0, 0, 0.380039, 5.7507, 58.5023)">
-  </image>
-
-
+  <!-- Daily Forecast Boxes -->
+  <g font-family="Arial, sans-serif" font-size="12" fill="#ffffff" text-anchor="middle">
+    <g transform="translate(0, 54)">
+      <rect width="46" height="46" rx="5" ry="5" stroke="#ffffff" fill="rgba(255,255,255,0.05)" />
+      <image href="@Model.Days[0].Image" width="30" height="30" x="8" y="5" />
+      <text x="23" y="42">@Model.Days[0].Day</text>
+    </g>
+    <g transform="translate(46, 54)">
+      <rect width="46" height="46" rx="5" ry="5" stroke="#ffffff" fill="rgba(255,255,255,0.05)" />
+      <image href="@Model.Days[1].Image" width="30" height="30" x="8" y="5" />
+      <text x="23" y="42">@Model.Days[1].Day</text>
+    </g>
+    <g transform="translate(92, 54)">
+      <rect width="46" height="46" rx="5" ry="5" stroke="#ffffff" fill="rgba(255,255,255,0.05)" />
+      <image href="@Model.Days[2].Image" width="30" height="30" x="8" y="5" />
+      <text x="23" y="42">@Model.Days[2].Day</text>
+    </g>
+    <g transform="translate(138, 54)">
+      <rect width="46" height="46" rx="5" ry="5" stroke="#ffffff" fill="rgba(255,255,255,0.05)" />
+      <image href="@Model.Days[3].Image" width="30" height="30" x="8" y="5" />
+      <text x="23" y="42">@Model.Days[3].Day</text>
+    </g>
+    <g transform="translate(184, 54)">
+      <rect width="46" height="46" rx="5" ry="5" stroke="#ffffff" fill="rgba(255,255,255,0.05)" />
+      <image href="@Model.Days[4].Image" width="30" height="30" x="8" y="5" />
+      <text x="23" y="42">@Model.Days[4].Day</text>
+    </g>
+  </g>
 </svg>

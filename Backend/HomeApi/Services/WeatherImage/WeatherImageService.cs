@@ -16,7 +16,7 @@ public class WeatherImageService
         var entries = Enumerable.Range(0, 5).Select(index => 
             new QuickEntry()
             {
-                Day =  $"{DateTime.Parse(weatherResponse.daily.time[index]):ddd}: {(int)weatherResponse.daily.temperature_2m_mean[index]}", 
+                Day =  $"{DateTime.Parse(weatherResponse.daily.time[index]):ddd}:{(int)weatherResponse.daily.temperature_2m_mean[index]}\u00b0", 
                 Image = daysWmo[index].image
             }).ToList();
         

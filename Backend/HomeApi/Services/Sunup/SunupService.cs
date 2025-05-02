@@ -17,7 +17,8 @@ public class SunupService
         SunupViewModel model = new SunupViewModel()
         {
             Pos = (progress * 230f) - 75f,
-            Url = isSunTime ? "http://127.0.0.1:5278/SunupAssets/Sun.jpg" : "http://127.0.0.1:5278/SunupAssets/Moon.jpg",
+            Url = isSunTime ? "http://127.0.0.1:5278/SunupAssets/Sun.png" : "http://127.0.0.1:5278/SunupAssets/Moon.png",
+            BgUrl = isSunTime ? "http://127.0.0.1:5278/SunupAssets/BgSun.jpg" : "http://127.0.0.1:5278/SunupAssets/BgMoon.jpg",
             SunupTime = sunrise.ToString("t"),
             SundownTime = sunset.ToString("t"),
         };

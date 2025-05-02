@@ -1,7 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 100">
     <rect width="230" height="100" style="stroke: rgb(0, 0, 0);"/>
-    <image href="@Model.Url "
+<!--    TODO: add stars, or make Sun Moon transparrsent-->
+<!--    TODO: add icons to describe times-->
+    <image href="@Model.BgUrl"
+           width="230" height="100" transform=""/>
+    <image href="@Model.Url"
            width="150" height="150" transform="" x="@Model.Pos" y="-25"/>
-    <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 30px; white-space: pre;stroke: rgb(0,0,0);" x="10" y="40">@Model.SunupTime</text>
-    <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 30px; white-space: pre;stroke: rgb(0,0,0);" x="10" y="80">@Model.SundownTime</text>
+    <image href="http://127.0.0.1:5278/SunupAssets/Sunrise.png"
+           width="50" height="50" transform="" x="10" y="7"/>
+    <image href="http://127.0.0.1:5278/SunupAssets/Sunset.png"
+           width="50" height="50" transform="" x="10" y="47"/>
+    <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 30px; white-space: pre;stroke: rgb(0,0,0);" x="60" y="40">@Model.SunupTime</text>
+    <text style="fill: rgb(255, 255, 255); font-family: &quot;Arial&quot;, sans-serif; font-size: 30px; white-space: pre;stroke: rgb(0,0,0);" x="60" y="80">@Model.SundownTime</text>
 </svg>
